@@ -52,7 +52,7 @@ describe("DOS attack in smarct contract", () => {
         console.log(`Good contract deployed with ${goodContract.address} address`)
 
         // Let's deploy the good contract
-        const attackContractFactory = await ethers.getContractFactory("Attack")
+        const attackContractFactory = await ethers.getContractFactory("AttackWV")
         const attackContract = await attackContractFactory.deploy(goodContract.address)
         await attackContract.deployed()
         console.log(`Attack contract deployed with ${attackContract.address} address`)
@@ -74,5 +74,24 @@ describe("DOS attack in smarct contract", () => {
 
         // Now the winner is address2, becuease, the attack contract cannot exploit this vulneravility
         expect(await goodContract.s_currentWinner()).to.equal(address2.address)
+    })
+
+    it("DOS attack with tx.origin vulnerability", async () => {
+        const [_, address1] = await ethers.getSigners()
+        // Deploy GoodOwner contract
+        const goodContractFactory = await ethers.getContractFactory("GoodOwner")
+        const goodContract = await goodContractFactory.connect(address1).deploy()
+        await goodContract.deployed()
+
+        // Deploy attacker owner
+        const attackContractOwner = await ethers.getContractFactory("AttackOwner")
+        const attackContract = await attackContractOwner.deploy(goodContract.address)
+        await attackContract.deployed()
+
+        // do the attack and change the owner
+        let transaction = await attackContract.connect(address1).attack()
+        await transaction.wait()
+
+        expect(await goodContract.owner()).to.equal(attackContract.address)
     })
 })
